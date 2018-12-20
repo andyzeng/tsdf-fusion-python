@@ -9,8 +9,8 @@ try:
     import pycuda.autoinit
     from pycuda.compiler import SourceModule
     FUSION_GPU_MODE = 1
-except Exception,e:
-    print('Warning: %s'%(str(e)))
+except Exception as err:
+    print('Warning: %s'%(str(err)))
     print('Failed to import PyCUDA. Running fusion in CPU mode.')
     FUSION_GPU_MODE = 0
 

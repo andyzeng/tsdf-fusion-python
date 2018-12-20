@@ -8,7 +8,7 @@ import fusion
 
 # (Optional) sample code to compute 3D bounds (in world coordinates) around convex hull of all camera view frustums in dataset
 print("Estimating voxel volume bounds...")
-n_imgs = 100
+n_imgs = 1000
 cam_intr = np.loadtxt("data/camera-intrinsics.txt",delimiter=' ')
 vol_bnds = np.zeros((3,2))
 for i in range(n_imgs):

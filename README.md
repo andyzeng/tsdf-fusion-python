@@ -4,15 +4,17 @@
 
 This is a lightweight python script that fuses multiple registered color and depth images into a projective truncated signed distance function (TSDF) volume, which can then be used to create high quality 3D surface meshes and point clouds. Tested on Ubuntu 16.04.
 
+An older CUDA/C++ version can be found [here](https://github.com/andyzeng/tsdf-fusion).
+
 ## Requirements
 
-* Python 2.7+ with [NumPy](http://www.numpy.org/), [PyCUDA](https://developer.nvidia.com/pycuda), [OpenCV](https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_tutorials.html), [Scikit-image](https://scikit-image.org/). These can be quickly installed/updated by running the following (replace pip with pip3 for Python 3):
+* Python 2.7+ with [NumPy](http://www.numpy.org/), [PyCUDA](https://developer.nvidia.com/pycuda), [OpenCV](https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_tutorials.html), [Scikit-image](https://scikit-image.org/). These can be quickly installed/updated by running the following:
   ```shell
-  pip install numpy opencv-python scikit-image
+  pip install --user numpy opencv-python scikit-image
   ```
 * [Optional] NVIDA GPU with [CUDA](https://developer.nvidia.com/cuda-downloads) support for GPU acceleration (powered by [PyCUDA](https://developer.nvidia.com/pycuda))
   ```shell
-  pip install pycuda
+  pip install --user pycuda
   ```
 
 ## Demo
