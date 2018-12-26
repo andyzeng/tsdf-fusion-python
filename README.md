@@ -12,7 +12,7 @@ An older CUDA/C++ version can be found [here](https://github.com/andyzeng/tsdf-f
   ```shell
   pip install --user numpy opencv-python scikit-image
   ```
-* [Optional] NVIDA GPU with [CUDA](https://developer.nvidia.com/cuda-downloads) support for GPU acceleration (powered by [PyCUDA](https://developer.nvidia.com/pycuda))
+* [Optional] NVIDA GPU with [CUDA](https://developer.nvidia.com/cuda-downloads) support for GPU acceleration. You'll need to install both [CUDA](https://developer.nvidia.com/cuda-downloads) and [PyCUDA](https://developer.nvidia.com/pycuda). [PyCUDA](https://developer.nvidia.com/pycuda) can be installed by running the following:
   ```shell
   pip install --user pycuda
   ```
