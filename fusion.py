@@ -96,7 +96,7 @@ class TSDFVolume(object):
                 // Skip if outside view frustum
                 int im_h = (int) other_params[2];
                 int im_w = (int) other_params[3];
-                if (pixel_x < 0 || pixel_x >= im_w || pixel_y < 0 || pixel_y >= im_h)
+                if (pixel_x < 0 || pixel_x >= im_w || pixel_y < 0 || pixel_y >= im_h || cam_pt_z<0)
                     return;
 
                 // Skip invalid depth
@@ -216,7 +216,8 @@ class TSDFVolume(object):
             valid_pix = np.logical_and(pix_x >= 0,
                         np.logical_and(pix_x < im_w,
                         np.logical_and(pix_y >= 0,
-                                       pix_y < im_h)))
+                        np.logical_and(pix_y < im_h,
+                                       cam_pts[2,:] > 0))))
 
             depth_val = np.zeros(pix_x.shape)
             depth_val[valid_pix] = depth_im[pix_y[valid_pix],pix_x[valid_pix]]
