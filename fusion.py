@@ -17,7 +17,7 @@ except Exception as err:
 
 class TSDFVolume(object):
 
-    def __init__(self,vol_bnds,voxel_size):
+    def __init__(self,vol_bnds,voxel_size, use_gpu = True):
 
         # Define voxel volume parameters
         self._vol_bnds = vol_bnds # rows: x,y,z columns: min,max in world coordinates in meters
@@ -35,8 +35,12 @@ class TSDFVolume(object):
         self._weight_vol_cpu = np.zeros(self._vol_dim).astype(np.float32) # for computing the cumulative moving average of observations per voxel
         self._color_vol_cpu = np.zeros(self._vol_dim).astype(np.float32)
 
+        #Set GPU_MODE
+        self.gpu_mode = use_gpu and FUSION_GPU_MODE
+
+
         # Copy voxel volumes to GPU
-        if FUSION_GPU_MODE:
+        if self.gpu_mode:
             self._tsdf_vol_gpu = cuda.mem_alloc(self._tsdf_vol_cpu.nbytes)
             cuda.memcpy_htod(self._tsdf_vol_gpu,self._tsdf_vol_cpu)
             self._weight_vol_gpu = cuda.mem_alloc(self._weight_vol_cpu.nbytes)
@@ -62,7 +66,7 @@ class TSDFVolume(object):
                 int max_threads_per_block = blockDim.x;
                 int block_idx = blockIdx.z*gridDim.y*gridDim.x+blockIdx.y*gridDim.x+blockIdx.x;
                 int voxel_idx = gpu_loop_idx*gridDim.x*gridDim.y*gridDim.z*max_threads_per_block+block_idx*max_threads_per_block+threadIdx.x;
-                
+
                 int vol_dim_x = (int) vol_dim[0];
                 int vol_dim_y = (int) vol_dim[1];
                 int vol_dim_z = (int) vol_dim[2];
@@ -163,7 +167,7 @@ class TSDFVolume(object):
     #             n_voxels_expand = int(np.ceil((new_bnds[dim,1]-self._vol_bnds[dim,1])/self._voxel_size))
     #             new_chunk_size = np.round((self._vol_bnds[:,1]-self._vol_bnds[:,0])/self._voxel_size).astype(int)
     #             new_chunk_size[dim] = n_voxels_expand # size of expanding region (i.e. chunk)
-                
+
     #             # Initialize chunks and concatenate to current voxel volume
     #             self._tsdf_vol_cpu = np.concatenate((self._tsdf_vol_cpu,np.ones(new_chunk_size)),axis=dim)
     #             self._weight_vol_cpu = np.concatenate((self._weight_vol_cpu,np.zeros(new_chunk_size)),axis=dim)
@@ -180,7 +184,7 @@ class TSDFVolume(object):
         color_im = np.floor(color_im[:,:,2]*256*256+color_im[:,:,1]*256+color_im[:,:,0])
 
         # GPU mode: integrate voxel volume (calls CUDA kernel)
-        if FUSION_GPU_MODE:
+        if self.gpu_mode:
             for gpu_loop_idx in range(self._n_gpu_loops):
                 self._cuda_integrate(self._tsdf_vol_gpu,
                                      self._weight_vol_gpu,
@@ -249,7 +253,7 @@ class TSDFVolume(object):
 
     # Copy voxel volume to CPU
     def get_volume(self):
-        if FUSION_GPU_MODE:
+        if self.gpu_mode:
             cuda.memcpy_dtoh(self._tsdf_vol_cpu,self._tsdf_vol_gpu)
             cuda.memcpy_dtoh(self._color_vol_cpu,self._color_vol_gpu)
         return self._tsdf_vol_cpu,self._color_vol_cpu
@@ -314,7 +318,7 @@ def meshwrite(filename,verts,faces,norms,colors):
     # Write vertex list
     for i in range(verts.shape[0]):
         ply_file.write("%f %f %f %f %f %f %d %d %d\n"%(verts[i,0],verts[i,1],verts[i,2],norms[i,0],norms[i,1],norms[i,2],colors[i,0],colors[i,1],colors[i,2]))
-    
+
     # Write face list
     for i in range(faces.shape[0]):
         ply_file.write("3 %d %d %d\n"%(faces[i,0],faces[i,1],faces[i,2]))
