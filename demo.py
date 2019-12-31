@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 
 import fusion
-import utils
 
 
 if __name__ == "__main__":
@@ -28,7 +27,7 @@ if __name__ == "__main__":
     cam_pose = np.loadtxt("data/frame-%06d.pose.txt"%(i))  # 4x4 rigid transformation matrix
 
     # Compute camera view frustum and extend convex hull
-    view_frust_pts = utils.get_view_frustum(depth_im, cam_intr, cam_pose)
+    view_frust_pts = fusion.get_view_frustum(depth_im, cam_intr, cam_pose)
     vol_bnds[:,0] = np.minimum(vol_bnds[:,0], np.amin(view_frust_pts, axis=1))
     vol_bnds[:,1] = np.maximum(vol_bnds[:,1], np.amax(view_frust_pts, axis=1))
   # ======================================================================================================== #
@@ -61,4 +60,4 @@ if __name__ == "__main__":
   # Get mesh from voxel volume and save to disk (can be viewed with Meshlab)
   print("Saving to mesh.ply...")
   verts, faces, norms, colors = tsdf_vol.get_mesh()
-  utils.meshwrite("mesh.ply", verts, faces, norms, colors)
+  fusion.meshwrite("mesh.ply", verts, faces, norms, colors)
