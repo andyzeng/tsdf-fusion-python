@@ -293,6 +293,9 @@ class TSDFVolume:
       self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self.b_const + new_g*self.g_const + new_r
 
   def get_volume(self):
+    if self.gpu_mode:
+      cuda.memcpy_dtoh(self._tsdf_vol_cpu, self._tsdf_vol_gpu)
+      cuda.memcpy_dtoh(self._color_vol_cpu, self._color_vol_gpu)
     return self._tsdf_vol_cpu, self._color_vol_cpu
 
   def get_mesh(self):
