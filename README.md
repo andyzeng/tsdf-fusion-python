@@ -8,9 +8,9 @@ An older CUDA/C++ version can be found [here](https://github.com/andyzeng/tsdf-f
 
 ## Requirements
 
-* Python 2.7+ with [NumPy](http://www.numpy.org/), [PyCUDA](https://developer.nvidia.com/pycuda), [OpenCV](https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_tutorials.html), [Scikit-image](https://scikit-image.org/). These can be quickly installed/updated by running the following:
+* Python 2.7+ with [NumPy](http://www.numpy.org/), [PyCUDA](https://developer.nvidia.com/pycuda), [OpenCV](https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_tutorials.html), [Scikit-image](https://scikit-image.org/) and [Numba](https://numba.pydata.org/). These can be quickly installed/updated by running the following:
   ```shell
-  pip install --user numpy opencv-python scikit-image
+  pip install --user numpy opencv-python scikit-image numba
   ```
 * [Optional] GPU acceleration requires an NVIDA GPU with [CUDA](https://developer.nvidia.com/cuda-downloads) and [PyCUDA](https://developer.nvidia.com/pycuda):
   ```shell
@@ -42,10 +42,10 @@ python demo.py
 This repository is a part of [3DMatch Toolbox](https://github.com/andyzeng/3dmatch-toolbox). If you find this code useful in your work, please consider citing:
 
 ```
-@inproceedings{zeng20163dmatch, 
-    title={3DMatch: Learning Local Geometric Descriptors from RGB-D Reconstructions}, 
-    author={Zeng, Andy and Song, Shuran and Nie{\ss}ner, Matthias and Fisher, Matthew and Xiao, Jianxiong and Funkhouser, Thomas}, 
-    booktitle={CVPR}, 
-    year={2017} 
+@inproceedings{zeng20163dmatch,
+    title={3DMatch: Learning Local Geometric Descriptors from RGB-D Reconstructions},
+    author={Zeng, Andy and Song, Shuran and Nie{\ss}ner, Matthias and Fisher, Matthew and Xiao, Jianxiong and Funkhouser, Thomas},
+    booktitle={CVPR},
+    year={2017}
 }
 ```
