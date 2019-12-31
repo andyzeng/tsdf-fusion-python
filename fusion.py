@@ -1,6 +1,5 @@
 # Copyright (c) 2018 Andy Zeng
 
-import time
 import numpy as np
 import utils
 
@@ -8,14 +7,14 @@ from numba import njit, prange
 from skimage import measure
 
 try:
-    import pycuda.driver as cuda
-    import pycuda.autoinit
-    from pycuda.compiler import SourceModule
-    FUSION_GPU_MODE = 1
+  import pycuda.driver as cuda
+  import pycuda.autoinit
+  from pycuda.compiler import SourceModule
+  FUSION_GPU_MODE = 1
 except Exception as err:
-    print('Warning: {}'.format(err))
-    print('Failed to import PyCUDA. Running fusion in CPU mode.')
-    FUSION_GPU_MODE = 0
+  print('Warning: {}'.format(err))
+  print('Failed to import PyCUDA. Running fusion in CPU mode.')
+  FUSION_GPU_MODE = 0
 
 
 class TSDFVolume:
@@ -166,7 +165,7 @@ class TSDFVolume:
       self.g_const = 256
 
   @staticmethod
-  @njit(parallel=True, nogil=True)
+  @njit(parallel=True)
   def vox2world(vol_origin, vox_coords, vox_size):
     """Convert voxel grid coordinates to world coordinates.
     """
@@ -179,7 +178,7 @@ class TSDFVolume:
     return cam_pts
 
   @staticmethod
-  @njit(parallel=True, nogil=True)
+  @njit(parallel=True)
   def cam2pix(cam_pts, intr):
     """Convert camera coordinates to pixel coordinates.
     """
@@ -193,7 +192,7 @@ class TSDFVolume:
     return pix
 
   @staticmethod
-  @njit(parallel=True, nogil=True)
+  @njit(parallel=True)
   def integrate_tsdf(tsdf_vol, dist, w_old, obs_weight):
     """Integrate the TSDF volume.
     """
