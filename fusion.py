@@ -34,6 +34,7 @@ class TSDFVolume:
     self._vol_bnds = vol_bnds
     self._voxel_size = float(voxel_size)
     self._trunc_margin = 5 * self._voxel_size  # truncation on SDF
+    self._color_const = 256 * 256
 
     # Adjust volume bounds and ensure C-order contiguous
     self._vol_dim = np.ceil((self._vol_bnds[:,1]-self._vol_bnds[:,0])/self._voxel_size).copy(order='C').astype(int)
@@ -158,10 +159,11 @@ class TSDFVolume:
         range(self._vol_dim[2]),
         indexing='ij'
       )
-      self.vox_coords = np.concatenate([xv.reshape(1,-1), yv.reshape(1,-1), zv.reshape(1,-1)], axis=0).astype(int).T
-
-      self.b_const = 256 * 256
-      self.g_const = 256
+      self.vox_coords = np.concatenate([
+        xv.reshape(1,-1),
+        yv.reshape(1,-1),
+        zv.reshape(1,-1)
+      ], axis=0).astype(int).T
 
   @staticmethod
   @njit(parallel=True)
@@ -217,7 +219,7 @@ class TSDFVolume:
 
     # Fold RGB color image into a single channel image
     color_im = color_im.astype(np.float32)
-    color_im = np.floor(color_im[...,2]*self.b_const + color_im[...,1]*self.g_const + color_im[...,0])
+    color_im = np.floor(color_im[...,2]*self._color_const + color_im[...,1]*256 + color_im[...,0])
 
     if self.gpu_mode:  # GPU mode: integrate voxel volume (calls CUDA kernel)
       for gpu_loop_idx in range(self._n_gpu_loops):
@@ -278,17 +280,17 @@ class TSDFVolume:
 
       # Integrate color
       old_color = self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
-      old_b = np.floor(old_color / self.b_const)
-      old_g = np.floor((old_color-old_b*self.b_const)/self.g_const)
-      old_r = old_color - old_b*self.b_const - old_g*self.g_const
+      old_b = np.floor(old_color / self._color_const)
+      old_g = np.floor((old_color-old_b*self._color_const)/256)
+      old_r = old_color - old_b*self._color_const - old_g*256
       new_color = color_im[pix_y[valid_pts],pix_x[valid_pts]]
-      new_b = np.floor(new_color / self.b_const)
-      new_g = np.floor((new_color - new_b*self.b_const) /self.g_const)
-      new_r = new_color - new_b*self.b_const - new_g*self.g_const
+      new_b = np.floor(new_color / self._color_const)
+      new_g = np.floor((new_color - new_b*self._color_const) /256)
+      new_r = new_color - new_b*self._color_const - new_g*256
       new_b = np.minimum(255., np.round((w_old*old_b + new_b) / w_new))
       new_g = np.minimum(255., np.round((w_old*old_g + new_g) / w_new))
       new_r = np.minimum(255., np.round((w_old*old_r + new_r) / w_new))
-      self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self.b_const + new_g*self.g_const + new_r
+      self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self._color_const + new_g*256 + new_r
 
   def get_volume(self):
     if self.gpu_mode:
@@ -308,9 +310,9 @@ class TSDFVolume:
 
     # Get vertex colors
     rgb_vals = color_vol[verts_ind[:,0], verts_ind[:,1], verts_ind[:,2]]
-    colors_b = np.floor(rgb_vals/self.b_const)
-    colors_g = np.floor((rgb_vals-colors_b*self.b_const)/self.g_const)
-    colors_r = rgb_vals-colors_b*self.b_const-colors_g*self.g_const
+    colors_b = np.floor(rgb_vals/self._color_const)
+    colors_g = np.floor((rgb_vals-colors_b*self._color_const)/256)
+    colors_r = rgb_vals-colors_b*self._color_const-colors_g*256
     colors = np.floor(np.asarray([colors_r,colors_g,colors_b])).T
     colors = colors.astype(np.uint8)
     return verts, faces, norms, colors
