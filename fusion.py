@@ -34,6 +34,7 @@ class TSDFVolume:
     self._vol_bnds = vol_bnds
     self._voxel_size = float(voxel_size)
     self._trunc_margin = 5 * self._voxel_size  # truncation on SDF
+    self._color_const = 256 * 256
 
     # Adjust volume bounds and ensure C-order contiguous
     self._vol_dim = np.ceil((self._vol_bnds[:,1]-self._vol_bnds[:,0])/self._voxel_size).copy(order='C').astype(int)
@@ -158,10 +159,11 @@ class TSDFVolume:
         range(self._vol_dim[2]),
         indexing='ij'
       )
-      self.vox_coords = np.concatenate([xv.reshape(1,-1), yv.reshape(1,-1), zv.reshape(1,-1)], axis=0).astype(int).T
-
-      self.b_const = 256 * 256
-      self.g_const = 256
+      self.vox_coords = np.concatenate([
+        xv.reshape(1,-1),
+        yv.reshape(1,-1),
+        zv.reshape(1,-1)
+      ], axis=0).astype(int).T
 
   @staticmethod
   @njit(parallel=True)
@@ -217,7 +219,7 @@ class TSDFVolume:
 
     # Fold RGB color image into a single channel image
     color_im = color_im.astype(np.float32)
-    color_im = np.floor(color_im[...,2]*self.b_const + color_im[...,1]*self.g_const + color_im[...,0])
+    color_im = np.floor(color_im[...,2]*self._color_const + color_im[...,1]*256 + color_im[...,0])
 
     if self.gpu_mode:  # GPU mode: integrate voxel volume (calls CUDA kernel)
       for gpu_loop_idx in range(self._n_gpu_loops):
@@ -278,23 +280,44 @@ class TSDFVolume:
 
       # Integrate color
       old_color = self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
-      old_b = np.floor(old_color / self.b_const)
-      old_g = np.floor((old_color-old_b*self.b_const)/self.g_const)
-      old_r = old_color - old_b*self.b_const - old_g*self.g_const
+      old_b = np.floor(old_color / self._color_const)
+      old_g = np.floor((old_color-old_b*self._color_const)/256)
+      old_r = old_color - old_b*self._color_const - old_g*256
       new_color = color_im[pix_y[valid_pts],pix_x[valid_pts]]
-      new_b = np.floor(new_color / self.b_const)
-      new_g = np.floor((new_color - new_b*self.b_const) /self.g_const)
-      new_r = new_color - new_b*self.b_const - new_g*self.g_const
+      new_b = np.floor(new_color / self._color_const)
+      new_g = np.floor((new_color - new_b*self._color_const) /256)
+      new_r = new_color - new_b*self._color_const - new_g*256
       new_b = np.minimum(255., np.round((w_old*old_b + new_b) / w_new))
       new_g = np.minimum(255., np.round((w_old*old_g + new_g) / w_new))
       new_r = np.minimum(255., np.round((w_old*old_r + new_r) / w_new))
-      self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self.b_const + new_g*self.g_const + new_r
+      self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self._color_const + new_g*256 + new_r
 
   def get_volume(self):
     if self.gpu_mode:
       cuda.memcpy_dtoh(self._tsdf_vol_cpu, self._tsdf_vol_gpu)
       cuda.memcpy_dtoh(self._color_vol_cpu, self._color_vol_gpu)
     return self._tsdf_vol_cpu, self._color_vol_cpu
+
+  def get_point_cloud(self):
+    """Extract a point cloud from the voxel volume.
+    """
+    tsdf_vol, color_vol = self.get_volume()
+
+    # Marching cubes
+    verts = measure.marching_cubes_lewiner(tsdf_vol, level=0)[0]
+    verts_ind = np.round(verts).astype(int)
+    verts = verts*self._voxel_size + self._vol_origin
+
+    # Get vertex colors
+    rgb_vals = color_vol[verts_ind[:, 0], verts_ind[:, 1], verts_ind[:, 2]]
+    colors_b = np.floor(rgb_vals / self._color_const)
+    colors_g = np.floor((rgb_vals - colors_b*self._color_const) / 256)
+    colors_r = rgb_vals - colors_b*self._color_const - colors_g*256
+    colors = np.floor(np.asarray([colors_r, colors_g, colors_b])).T
+    colors = colors.astype(np.uint8)
+
+    pc = np.hstack([verts, colors])
+    return pc
 
   def get_mesh(self):
     """Compute a mesh from the voxel volume using marching cubes.
@@ -308,9 +331,9 @@ class TSDFVolume:
 
     # Get vertex colors
     rgb_vals = color_vol[verts_ind[:,0], verts_ind[:,1], verts_ind[:,2]]
-    colors_b = np.floor(rgb_vals/self.b_const)
-    colors_g = np.floor((rgb_vals-colors_b*self.b_const)/self.g_const)
-    colors_r = rgb_vals-colors_b*self.b_const-colors_g*self.g_const
+    colors_b = np.floor(rgb_vals/self._color_const)
+    colors_g = np.floor((rgb_vals-colors_b*self._color_const)/256)
+    colors_r = rgb_vals-colors_b*self._color_const-colors_g*256
     colors = np.floor(np.asarray([colors_r,colors_g,colors_b])).T
     colors = colors.astype(np.uint8)
     return verts, faces, norms, colors
@@ -373,3 +396,30 @@ def meshwrite(filename, verts, faces, norms, colors):
     ply_file.write("3 %d %d %d\n"%(faces[i,0], faces[i,1], faces[i,2]))
 
   ply_file.close()
+
+
+def pcwrite(filename, xyzrgb):
+  """Save a point cloud to a polygon .ply file.
+  """
+  xyz = xyzrgb[:, :3]
+  rgb = xyzrgb[:, 3:].astype(np.uint8)
+
+  # Write header
+  ply_file = open(filename,'w')
+  ply_file.write("ply\n")
+  ply_file.write("format ascii 1.0\n")
+  ply_file.write("element vertex %d\n"%(xyz.shape[0]))
+  ply_file.write("property float x\n")
+  ply_file.write("property float y\n")
+  ply_file.write("property float z\n")
+  ply_file.write("property uchar red\n")
+  ply_file.write("property uchar green\n")
+  ply_file.write("property uchar blue\n")
+  ply_file.write("end_header\n")
+
+  # Write vertex list
+  for i in range(xyz.shape[0]):
+    ply_file.write("%f %f %f %d %d %d\n"%(
+      xyz[i, 0], xyz[i, 1], xyz[i, 2],
+      rgb[i, 0], rgb[i, 1], rgb[i, 2],
+    ))
