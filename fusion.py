@@ -201,7 +201,7 @@ class TSDFVolume:
     w_new = np.empty_like(w_old, dtype=np.float32)
     for i in prange(len(tsdf_vol)):
       w_new[i] = w_old[i] + obs_weight
-      tsdf_vol_int[i] = (w_old[i] * tsdf_vol[i] + dist[i]) / w_new[i]
+      tsdf_vol_int[i] = (w_old[i] * tsdf_vol[i] + obs_weight * dist[i]) / w_new[i]
     return tsdf_vol_int, w_new
 
   def integrate(self, color_im, depth_im, cam_intr, cam_pose, obs_weight=1.):
@@ -287,9 +287,9 @@ class TSDFVolume:
       new_b = np.floor(new_color / self._color_const)
       new_g = np.floor((new_color - new_b*self._color_const) /256)
       new_r = new_color - new_b*self._color_const - new_g*256
-      new_b = np.minimum(255., np.round((w_old*old_b + new_b) / w_new))
-      new_g = np.minimum(255., np.round((w_old*old_g + new_g) / w_new))
-      new_r = np.minimum(255., np.round((w_old*old_r + new_r) / w_new))
+      new_b = np.minimum(255., np.round((w_old*old_b + obs_weight*new_b) / w_new))
+      new_g = np.minimum(255., np.round((w_old*old_g + obs_weight*new_g) / w_new))
+      new_r = np.minimum(255., np.round((w_old*old_r + obs_weight*new_r) / w_new))
       self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b*self._color_const + new_g*256 + new_r
 
   def get_volume(self):
