@@ -123,7 +123,7 @@ class TSDFVolume:
           float obs_weight = other_params[5];
           float w_new = w_old + obs_weight;
           weight_vol[voxel_idx] = w_new;
-          tsdf_vol[voxel_idx] = (tsdf_vol[voxel_idx]*w_old+dist)/w_new;
+          tsdf_vol[voxel_idx] = (tsdf_vol[voxel_idx]*w_old+obs_weight*dist)/w_new;
           // Integrate color
           float old_color = color_vol[voxel_idx];
           float old_b = floorf(old_color/(256*256));
@@ -133,9 +133,9 @@ class TSDFVolume:
           float new_b = floorf(new_color/(256*256));
           float new_g = floorf((new_color-new_b*256*256)/256);
           float new_r = new_color-new_b*256*256-new_g*256;
-          new_b = fmin(roundf((old_b*w_old+new_b)/w_new),255.0f);
-          new_g = fmin(roundf((old_g*w_old+new_g)/w_new),255.0f);
-          new_r = fmin(roundf((old_r*w_old+new_r)/w_new),255.0f);
+          new_b = fmin(roundf((old_b*w_old+obs_weight*new_b)/w_new),255.0f);
+          new_g = fmin(roundf((old_g*w_old+obs_weight*new_g)/w_new),255.0f);
+          new_r = fmin(roundf((old_r*w_old+obs_weight*new_r)/w_new),255.0f);
           color_vol[voxel_idx] = new_b*256*256+new_g*256+new_r;
         }""")
 
