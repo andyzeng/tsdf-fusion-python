@@ -83,7 +83,7 @@ class TSDFVolume:
           int vol_dim_x = (int) vol_dim[0];
           int vol_dim_y = (int) vol_dim[1];
           int vol_dim_z = (int) vol_dim[2];
-          if (voxel_idx > vol_dim_x*vol_dim_y*vol_dim_z)
+          if (voxel_idx >= vol_dim_x*vol_dim_y*vol_dim_z)
               return;
           // Get voxel grid coordinates (note: be careful when casting)
           float voxel_x = floorf(((float)voxel_idx)/((float)(vol_dim_y*vol_dim_z)));
