@@ -13,12 +13,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create a mesh using TSDF fusion of multiple frames from depth camera')
     parser.add_argument(
         "-t", "--total_frames", type=int, default=1,
-        help="The total number of frames to process. Each frame has 1 rgb, 1 depth and 1 pose.txt file")
+        help="The total number of frames to process. Each frame has 1 rgb, 1 depth and 1 pose.txt file"
+    )
     parser.add_argument(
         "-c", "--calc_vol_bounds", action="store_true",
-        help="If given, will automatically calulate the size of voxel volume. Else will use fixed volume size")
+        help="If given, will automatically calulate the size of voxel volume. Else will use fixed volume size"
+    )
+    parser.add_argument(
+        "-v", "--voxel_size", type=float, default=0.004,
+        help="The size of each voxel, in meters"
+    )
     args = parser.parse_args()
     n_imgs = args.total_frames
+    voxel_size = args.voxel_size
     cam_intr = np.loadtxt("data/camera-intrinsics.txt", delimiter=' ')
 
     # Compute the 3D bounds in world coordinates of the convex hull of all camera view frustums in the dataset
@@ -47,7 +54,7 @@ if __name__ == "__main__":
 
     # Initialize voxel volume
     print("Initializing voxel volume...")
-    tsdf_vol = fusion.TSDFVolume(vol_bnds, voxel_size=0.004 * 1)
+    tsdf_vol = fusion.TSDFVolume(vol_bnds, voxel_size=voxel_size)
 
     # Integrate voxels: Loop through RGB-D images and fuse them together
     t0_elapse = time.time()
