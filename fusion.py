@@ -21,13 +21,18 @@ class TSDFVolume:
     """Volumetric TSDF Fusion of RGB-D Images.
     """
 
-    def __init__(self, vol_bnds, voxel_size, use_gpu=True):
+    def __init__(self, vol_bnds, voxel_size, use_gpu=True, init_tsdf_vol_value=1.0):
         """Constructor.
 
         Args:
-          vol_bnds (ndarray): An ndarray of shape (3, 2). Specifies the
-            xyz bounds (min/max) in meters.
-          voxel_size (float): The volume discretization in meters.
+            vol_bnds (ndarray): An ndarray of shape (3, 2). Specifies the
+                xyz bounds (min/max) in meters.
+            voxel_size (float): The volume discretization in meters.
+            init_tsdf_vol_value (float): The value with which to initialize the TSDF voxel volume.
+                Voxels should be initialized with -1, because this will correctly result in voxel on the inside of any
+                object to have negative values. However, this causes an issue when converting to mesh - any space not
+                observed in volume will remain -1, and cause a surface to appear at the edges of the camera view
+                frustums. To overcome this, a simple hack is to set the initialization to +1.
         """
         vol_bnds = np.asarray(vol_bnds)
         assert vol_bnds.shape == (3, 2), "[!] `vol_bnds` should be of shape (3, 2)."
@@ -50,7 +55,9 @@ class TSDFVolume:
         )
 
         # Initialize pointers to voxel volume in CPU memory
-        self._tsdf_vol_cpu = np.ones(self._vol_dim).astype(np.float32)
+        self._tsdf_vol_cpu = np.empty(self._vol_dim, dtype=np.float32)
+        self._tsdf_vol_cpu.fill(init_tsdf_vol_value)
+
         # for computing the cumulative moving average of observations per voxel
         self._weight_vol_cpu = np.zeros(self._vol_dim).astype(np.float32)
         self._color_vol_cpu = np.zeros(self._vol_dim).astype(np.float32)
@@ -256,8 +263,8 @@ class TSDFVolume:
                                      )
         else:  # CPU mode: integrate voxel volume (vectorized implementation)
             # Convert voxel grid coordinates to pixel coordinates
-            cam_pts = self.vox2world(self._vol_origin, self.vox_coords, self._voxel_size)
-            cam_pts = rigid_transform(cam_pts, np.linalg.inv(cam_pose))
+            world_pts = self.vox2world(self._vol_origin, self.vox_coords, self._voxel_size)
+            cam_pts = rigid_transform(world_pts, np.linalg.inv(cam_pose))
             pix_z = cam_pts[:, 2]
             pix = self.cam2pix(cam_pts, cam_intr)
             pix_x, pix_y = pix[:, 0], pix[:, 1]
