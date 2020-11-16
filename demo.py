@@ -13,7 +13,7 @@ import fusion
 
 
 ext_imgs = ['.color.jpg', '.color.png']
-ext_depth = '.depth.png'
+ext_depth = '.depth.rect.png'
 ext_metadata = '.metadata.json'
 ext_tsdf = '.tsdf.npy'
 ext_col_grid = '.col_grid.npy'
@@ -96,15 +96,20 @@ if __name__ == "__main__":
                 depth_im /= 1000.  # Convert depth to meters. It is saved in 16-bit PNG as millimeters.
 
                 # Compute camera view frustum and extend convex hull
-                cam_pose = np.array(metadata["camera"]["transform_cam2world"]["mat_4x4"])
+                cam_pose = np.array(metadata["camera"]["transforms"]["numpy_cam"]["cam2world"]["mat_4x4"])
                 view_frust_pts = fusion.get_view_frustum(depth_im, cam_intr, cam_pose)
                 vol_bnds[:, 0] = np.minimum(vol_bnds[:, 0], np.amin(view_frust_pts, axis=1))
                 vol_bnds[:, 1] = np.maximum(vol_bnds[:, 1], np.amax(view_frust_pts, axis=1))
         else:
+            # vol_bnds = np.array((
+            #     (-0.256, 0.256),
+            #     (-0.256, 0.256),
+            #     (-0.01, (0.256 * 2) - 0.01),
+            # ))
             vol_bnds = np.array((
-                (-0.256, 0.256),
-                (-0.256, 0.256),
-                (0.0, 0.256 * 2),
+                (-0.128, 0.128),
+                (-0.128, 0.128),
+                (-0.01, 0.118),
             ))
 
         print('vol_bnds: ', vol_bnds)
@@ -134,7 +139,7 @@ if __name__ == "__main__":
             with open(f_metadata) as json_file:
                 metadata = json.load(json_file)
             cam_intr = np.array(metadata["camera"]["intrinsics"])
-            cam_pose = np.array(metadata["camera"]["transform_cam2world"]["mat_4x4"])
+            cam_pose = np.array(metadata["camera"]["transforms"]["numpy_cam"]["cam2world"]["mat_4x4"])
 
             # Integrate observation into voxel volume (assume color aligned with depth)
             tsdf_vol.integrate(color_image, depth_im, cam_intr, cam_pose, obs_weight=1.)
