@@ -40,7 +40,7 @@ class TSDFVolume:
         # Define voxel volume parameters
         self._vol_bnds = vol_bnds
         self._voxel_size = float(voxel_size)
-        self._trunc_margin = 5 * self._voxel_size  # truncation on SDF
+        self._trunc_margin = 0.016
         self._color_const = 256 * 256
 
         # Adjust volume bounds and ensure C-order contiguous
@@ -218,7 +218,7 @@ class TSDFVolume:
             tsdf_vol_int[i] = (w_old[i] * tsdf_vol[i] + obs_weight * dist[i]) / w_new[i]
         return tsdf_vol_int, w_new
 
-    def integrate(self, color_im, depth_im, cam_intr, cam_pose, obs_weight=1.):
+    def integrate(self, color_im, depth_im, cam_intr, cam_pose, mask, obs_weight=1.):
         """Integrate an RGB-D frame into the TSDF volume.
 
         Args:
@@ -285,6 +285,7 @@ class TSDFVolume:
             valid_vox_x = self.vox_coords[valid_pts, 0]
             valid_vox_y = self.vox_coords[valid_pts, 1]
             valid_vox_z = self.vox_coords[valid_pts, 2]
+            mask[valid_vox_x, valid_vox_y, valid_vox_z] = True
             w_old = self._weight_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
             tsdf_vals = self._tsdf_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z]
             valid_dist = dist[valid_pts]
@@ -305,6 +306,8 @@ class TSDFVolume:
             new_g = np.minimum(255., np.round((w_old * old_g + obs_weight * new_g) / w_new))
             new_r = np.minimum(255., np.round((w_old * old_r + obs_weight * new_r) / w_new))
             self._color_vol_cpu[valid_vox_x, valid_vox_y, valid_vox_z] = new_b * self._color_const + new_g * 256 + new_r
+
+        return mask
 
     def get_volume(self):
         if self.gpu_mode:
