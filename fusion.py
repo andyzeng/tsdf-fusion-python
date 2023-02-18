@@ -118,7 +118,7 @@ class TSDFVolume:
           float depth_diff = depth_value-cam_pt_z;
           if (depth_diff < -trunc_margin)
               return;
-          float dist = fmin(1.0f,depth_diff/trunc_margin);
+          float dist = -fmin(1.0f,depth_diff/trunc_margin);
           float w_old = weight_vol[voxel_idx];
           float obs_weight = other_params[5];
           float w_new = w_old + obs_weight;
